@@ -3,8 +3,17 @@ from datetime import date, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Position, TradePlan
+from app.models import Command, Position, TradePlan
 from app.schemas import CreatePlanRequest, ExecutePlanRequest
+from app.services.risk_manager import calculate_position_size
+
+SIGNAL_LABELS = {
+    "2B_STRUCTURE": "2B结构",
+    "MA_CONCENTRATION_BREAKOUT": "均线密集突破",
+    "MA_TURN_UP": "MA拐头向上",
+}
+
+DEFAULT_ACCOUNT_VALUE = 100_000.0
 
 
 async def create_plan(req: CreatePlanRequest, db: AsyncSession) -> TradePlan:
@@ -26,6 +35,36 @@ async def create_plan(req: CreatePlanRequest, db: AsyncSession) -> TradePlan:
         created_at=datetime.utcnow(),
     )
     db.add(plan)
+    await db.flush()
+
+    suggested_qty = req.position_size
+    if not suggested_qty:
+        pos_result = calculate_position_size(
+            account_value=DEFAULT_ACCOUNT_VALUE,
+            entry_price=req.entry_price,
+            stop_loss=req.stop_loss,
+        )
+        suggested_qty = pos_result.shares if pos_result.shares > 0 else None
+
+    signal_label = SIGNAL_LABELS.get(req.signal_type or "", req.signal_type or "")
+    priority = "RED" if req.position_type.value == "CONFIRM" else "YELLOW"
+
+    command = Command(
+        symbol=req.symbol,
+        priority=priority,
+        action="BUY",
+        headline=f"{req.symbol} {signal_label}买入",
+        detail=req.signal_reasoning or req.expectation,
+        suggested_price=req.entry_price,
+        suggested_quantity=suggested_qty,
+        stop_loss=req.stop_loss,
+        target_price=req.target_price,
+        risk_reward_ratio=req.risk_reward_ratio,
+        plan_id=plan.id,
+        status="PENDING",
+        created_at=datetime.utcnow(),
+    )
+    db.add(command)
     await db.commit()
     await db.refresh(plan)
     return plan

@@ -1,11 +1,11 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Command
+from app.models import Command, Position, TradePlan
 from app.schemas import CommandResponse, ExecuteCommandRequest
 
 router = APIRouter()
@@ -61,9 +61,32 @@ async def execute_command(
     cmd.actual_price = req.actual_price
     cmd.actual_quantity = req.actual_quantity
     cmd.executed_at = datetime.utcnow()
+
+    position_id = None
+    if cmd.plan_id:
+        plan_result = await db.execute(
+            select(TradePlan).where(TradePlan.id == cmd.plan_id)
+        )
+        plan = plan_result.scalar_one_or_none()
+        if plan:
+            plan.status = "EXECUTED"
+            position = Position(
+                plan_id=plan.id,
+                symbol=plan.symbol,
+                quantity=req.actual_quantity,
+                entry_price=req.actual_price,
+                entry_date=date.today(),
+                stop_loss=plan.stop_loss,
+                target_price=plan.target_price,
+                status="OPEN",
+            )
+            db.add(position)
+            await db.flush()
+            position_id = position.id
+
     await db.commit()
 
-    return {"status": "EXECUTED", "command_id": cmd.id}
+    return {"status": "EXECUTED", "command_id": cmd.id, "position_id": position_id}
 
 
 @router.post("/{command_id}/dismiss")
