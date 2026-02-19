@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Command, Position, TradePlan
 from app.schemas import CommandResponse, ExecuteCommandRequest
+from app.services.command_generator import sync_position_commands
 
 router = APIRouter()
 
@@ -15,6 +16,8 @@ PRIORITY_ORDER = {"RED": 0, "YELLOW": 1, "GREEN": 2}
 
 @router.get("", response_model=list[CommandResponse])
 async def list_commands(db: AsyncSession = Depends(get_db)):
+    await sync_position_commands(db)
+
     result = await db.execute(
         select(Command)
         .where(Command.status == "PENDING")
