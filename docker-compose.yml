@@ -1,0 +1,15 @@
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8888:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

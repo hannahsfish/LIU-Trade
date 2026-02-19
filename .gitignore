@@ -1,2 +1,4 @@
 .worktrees/
 worktrees/
+data/
+.env
