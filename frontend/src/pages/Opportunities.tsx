@@ -56,23 +56,28 @@ export function Opportunities() {
     setWatchlist(prev => prev.filter(w => w.symbol !== symbol))
   }
 
-  const handleCreatePlan = (item: WatchlistItem) => {
+  const handleCreatePlan = async (item: WatchlistItem) => {
     const sig = item.latest_signal
     if (!sig) return
-    api.createPlan({
-      symbol: item.symbol,
-      expectation: sig.reasoning,
-      clock_direction: '2_OCLOCK',
-      target_price: sig.target_price,
-      stop_loss: sig.stop_loss,
-      stop_loss_type: 'PREV_LOW',
-      max_loss_pct: Math.round(((sig.entry_price - sig.stop_loss) / sig.entry_price) * 100 * 100) / 100,
-      entry_price: sig.entry_price,
-      position_type: sig.position_advice,
-      risk_reward_ratio: sig.risk_reward_ratio,
-      signal_type: sig.signal_type,
-      signal_reasoning: sig.reasoning,
-    }).then(() => navigate('/'))
+    try {
+      await api.createPlan({
+        symbol: item.symbol,
+        expectation: sig.reasoning,
+        clock_direction: '2_OCLOCK',
+        target_price: sig.target_price,
+        stop_loss: sig.stop_loss,
+        stop_loss_type: 'PREV_LOW',
+        max_loss_pct: Math.round(((sig.entry_price - sig.stop_loss) / sig.entry_price) * 100 * 100) / 100,
+        entry_price: sig.entry_price,
+        position_type: sig.position_advice,
+        risk_reward_ratio: sig.risk_reward_ratio,
+        signal_type: sig.signal_type,
+        signal_reasoning: sig.reasoning,
+      })
+      navigate('/')
+    } catch (err) {
+      alert(`创建计划失败: ${err instanceof Error ? err.message : '未知错误'}`)
+    }
   }
 
   return (
