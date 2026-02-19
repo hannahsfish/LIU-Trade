@@ -18,9 +18,13 @@ async def scanner_status():
 
 @router.post("/run")
 async def trigger_scan(full: bool = Query(False)):
+    from app.services.scanner import scanner_state
+
     status = get_scanner_status()
     if status["running"]:
         return {"message": "扫描正在进行中", "status": status}
+    scanner_state.running = True
+    scanner_state.current_symbol = "启动中..."
     asyncio.create_task(run_scan(full=full))
     return {"message": "扫描已启动", "full": full}
 
