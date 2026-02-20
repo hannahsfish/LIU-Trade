@@ -264,7 +264,7 @@ def get_scanner_status() -> dict:
     return {
         "running": scanner_state.running,
         "current_symbol": scanner_state.current_symbol,
-        "last_scan_time": scanner_state.last_scan_time.isoformat() if scanner_state.last_scan_time else None,
+        "last_scan_time": (scanner_state.last_scan_time.isoformat() + "Z") if scanner_state.last_scan_time else None,
         "last_scan_duration_seconds": round(scanner_state.last_scan_duration, 1),
         "stocks_scanned": scanner_state.stocks_scanned,
         "opportunities_found": scanner_state.opportunities_found,
