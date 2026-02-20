@@ -12,7 +12,7 @@ function NavBar() {
 
   return (
     <nav className="border-b px-6 py-3 flex items-center gap-2" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}>
-      <span className="text-lg font-bold mr-6">LEI</span>
+      <span className="text-lg font-bold mr-6">LIU</span>
       <NavLink to="/" className={linkClass}>指令</NavLink>
       <NavLink to="/positions" className={linkClass}>持仓</NavLink>
       <NavLink to="/opportunities" className={linkClass}>机会</NavLink>

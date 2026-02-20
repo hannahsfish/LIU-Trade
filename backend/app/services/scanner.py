@@ -1,5 +1,5 @@
 """
-LEI auto-scanner: scans stock universe, finds opportunities,
+LIU auto-scanner: scans stock universe, finds opportunities,
 manages watchlist automatically.
 
 Scan tiers (API budget strategy):

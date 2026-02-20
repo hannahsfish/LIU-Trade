@@ -1,7 +1,7 @@
 """
-US large-cap stock universe for LEI scanner.
+US large-cap stock universe for LIU scanner.
 ~200 stocks: S&P 500 core components across all sectors.
-Manually curated to exclude financials/REITs/utilities (LEI focuses on growth).
+Manually curated to exclude financials/REITs/utilities (LIU focuses on growth).
 """
 
 SCAN_UNIVERSE: list[str] = [

@@ -71,8 +71,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="LEI Trading System",
-    description="LEI 框架自动分析美股并生成操作指令",
+    title="LIU Trading System",
+    description="LIU 框架自动分析美股并生成操作指令",
     version="0.1.0",
     lifespan=lifespan,
 )
