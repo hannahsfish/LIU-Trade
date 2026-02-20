@@ -203,10 +203,6 @@ async def _sync_watchlist(results: list[ScanResult], db: AsyncSession):
 
 
 async def run_scan(full: bool = False):
-    if scanner_state.running:
-        logger.warning("Scanner already running, skipping")
-        return
-
     scanner_state.running = True
     scanner_state.stocks_scanned = 0
     scanner_state.opportunities_found = 0

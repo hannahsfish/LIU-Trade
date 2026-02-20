@@ -204,18 +204,20 @@ async def get_cached_row_count(symbol: str, db: AsyncSession) -> int:
     return result.scalar_one()
 
 
-def is_data_stale(latest_date: date_type | None, max_age_days: int = 1) -> bool:
+def is_data_stale(latest_date: date_type | None, max_age_days: int = 0) -> bool:
     if latest_date is None:
         return True
     today = date_type.today()
     weekday = today.weekday()
     if weekday == 0:
-        threshold = today - timedelta(days=3)
+        expected = today - timedelta(days=3)
     elif weekday == 6:
-        threshold = today - timedelta(days=2)
+        expected = today - timedelta(days=1)
+    elif weekday == 5:
+        expected = today - timedelta(days=1)
     else:
-        threshold = today - timedelta(days=max_age_days)
-    return latest_date < threshold
+        expected = today - timedelta(days=max_age_days)
+    return latest_date < expected
 
 
 async def fetch_ohlcv(
