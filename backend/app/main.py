@@ -10,9 +10,10 @@ from zoneinfo import ZoneInfo
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import init_db
+from app.database import init_db, async_session
 from app.routers import analysis, backtest, commands, plans, positions, scanner, signals, stocks
 from app.services.scanner import run_scan
+from app.services.data_fetcher import get_realtime_price
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +63,47 @@ async def _scheduled_scanner():
         await run_scan(full=full)
 
 
+async def _update_position_prices():
+    """Update realtime prices for open positions every 15 minutes during market hours."""
+    from sqlalchemy import select
+    from app.models import Position
+
+    while True:
+        # Check if US market is open (9:30-16:00 ET)
+        now_et = datetime.now(ET)
+        market_open = now_et.hour >= 9 and now_et.hour < 16
+        weekday = now_et.weekday()
+
+        if market_open and weekday < 5:
+            try:
+                async with async_session() as db:
+                    result = await db.execute(
+                        select(Position).where(Position.status == "OPEN")
+                    )
+                    positions = result.scalars().all()
+
+                    for pos in positions:
+                        price = await get_realtime_price(pos.symbol)
+                        if price:
+                            logger.debug(f"{pos.symbol}: updated to ${price}")
+
+                    await db.commit()
+                    if positions:
+                        logger.info(f"Updated prices for {len(positions)} positions")
+            except Exception as e:
+                logger.error(f"Failed to update position prices: {e}")
+
+        await asyncio.sleep(900)  # 15 minutes
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    task = asyncio.create_task(_scheduled_scanner())
+    scanner_task = asyncio.create_task(_scheduled_scanner())
+    price_task = asyncio.create_task(_update_position_prices())
     yield
-    task.cancel()
+    scanner_task.cancel()
+    price_task.cancel()
 
 
 app = FastAPI(
