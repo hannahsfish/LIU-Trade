@@ -3,11 +3,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Position
+from app.models import Position, PriceHistory
 from app.schemas import ClosePositionRequest, PositionResponse
 from app.services.plan_manager import close_position
 
 router = APIRouter()
+
+
+async def _get_latest_close(symbol: str, db: AsyncSession) -> float | None:
+    result = await db.execute(
+        select(PriceHistory.close)
+        .where(PriceHistory.symbol == symbol)
+        .order_by(PriceHistory.date.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 @router.get("", response_model=list[PositionResponse])
@@ -20,8 +30,20 @@ async def list_positions(
         .order_by(Position.entry_date.desc())
     )
     positions = result.scalars().all()
-    return [
-        PositionResponse(
+
+    items = []
+    for p in positions:
+        current_price = None
+        pnl = p.pnl
+        pnl_pct = p.pnl_pct
+
+        if p.status == "OPEN":
+            current_price = await _get_latest_close(p.symbol, db)
+            if current_price is not None:
+                pnl = round((current_price - p.entry_price) * p.quantity, 2)
+                pnl_pct = round((current_price - p.entry_price) / p.entry_price * 100, 2)
+
+        items.append(PositionResponse(
             id=p.id,
             plan_id=p.plan_id,
             symbol=p.symbol,
@@ -30,12 +52,12 @@ async def list_positions(
             entry_date=p.entry_date,
             stop_loss=p.stop_loss,
             target_price=p.target_price,
-            pnl=p.pnl,
-            pnl_pct=p.pnl_pct,
+            current_price=current_price,
+            pnl=pnl,
+            pnl_pct=pnl_pct,
             status=p.status,
-        )
-        for p in positions
-    ]
+        ))
+    return items
 
 
 @router.get("/history", response_model=list[PositionResponse])

@@ -30,10 +30,16 @@ export function PositionCard({ position }: Props) {
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 text-sm">
+      <div className="grid grid-cols-4 gap-4 text-sm">
         <div>
           <span style={{ color: 'var(--color-text-secondary)' }}>成本</span>
           <div className="font-medium">{formatCurrency(position.entry_price)}</div>
+        </div>
+        <div>
+          <span style={{ color: 'var(--color-text-secondary)' }}>现价</span>
+          <div className="font-medium">
+            {position.current_price != null ? formatCurrency(position.current_price) : '--'}
+          </div>
         </div>
         <div>
           <span style={{ color: 'var(--color-text-secondary)' }}>止损</span>

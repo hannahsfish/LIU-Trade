@@ -46,7 +46,7 @@ async def get_watchlist(db: AsyncSession = Depends(get_db)):
 
         watchlist_data.append({
             "symbol": w.symbol,
-            "added_at": w.added_at.isoformat() if w.added_at else None,
+            "added_at": (w.added_at.isoformat() + "Z") if w.added_at else None,
             "notes": w.notes,
             "latest_signal": {
                 "signal_type": sig.signal_type,
@@ -57,7 +57,7 @@ async def get_watchlist(db: AsyncSession = Depends(get_db)):
                 "position_advice": sig.position_advice,
                 "reasoning": sig.reasoning,
                 "strength": sig.strength,
-                "created_at": sig.created_at.isoformat() if sig.created_at else None,
+                "created_at": (sig.created_at.isoformat() + "Z") if sig.created_at else None,
             } if sig else None,
         })
 

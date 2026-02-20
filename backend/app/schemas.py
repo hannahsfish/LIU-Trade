@@ -1,7 +1,14 @@
 from datetime import date, datetime
 from enum import Enum
+from typing import Annotated
 
 from pydantic import BaseModel
+from pydantic.functional_serializers import PlainSerializer
+
+UTCDatetime = Annotated[
+    datetime,
+    PlainSerializer(lambda v: v.isoformat() + "Z" if v else None, return_type=str),
+]
 
 
 class Priority(str, Enum):
@@ -174,7 +181,7 @@ class CommandResponse(BaseModel):
     target_price: float | None = None
     risk_reward_ratio: float | None = None
     status: str
-    created_at: datetime
+    created_at: UTCDatetime
 
 
 class ExecuteCommandRequest(BaseModel):
@@ -214,7 +221,7 @@ class PlanResponse(BaseModel):
     status: str
     signal_type: str | None = None
     signal_reasoning: str | None = None
-    created_at: datetime
+    created_at: UTCDatetime
 
 
 class ExecutePlanRequest(BaseModel):
