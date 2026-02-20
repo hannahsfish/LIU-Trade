@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models import Position, PriceHistory
 from app.schemas import ClosePositionRequest, PositionResponse
 from app.services.plan_manager import close_position
+from app.services.data_fetcher import get_realtime_price
 
 router = APIRouter()
 
@@ -18,6 +19,15 @@ async def _get_latest_close(symbol: str, db: AsyncSession) -> float | None:
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+async def _get_current_price(symbol: str, db: AsyncSession) -> float | None:
+    # Try realtime price first (15min delayed during market hours)
+    realtime = await get_realtime_price(symbol)
+    if realtime:
+        return realtime
+    # Fall back to cached daily close
+    return await _get_latest_close(symbol, db)
 
 
 @router.get("", response_model=list[PositionResponse])
@@ -38,7 +48,7 @@ async def list_positions(
         pnl_pct = p.pnl_pct
 
         if p.status == "OPEN":
-            current_price = await _get_latest_close(p.symbol, db)
+            current_price = await _get_current_price(p.symbol, db)
             if current_price is not None:
                 pnl = round((current_price - p.entry_price) * p.quantity, 2)
                 pnl_pct = round((current_price - p.entry_price) / p.entry_price * 100, 2)

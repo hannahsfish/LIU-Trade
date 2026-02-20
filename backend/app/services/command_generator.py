@@ -64,7 +64,13 @@ async def generate_commands_from_signals(
 
 async def _get_latest_close(symbol: str, db: AsyncSession) -> float | None:
     from app.models import PriceHistory
+    from app.services.data_fetcher import get_realtime_price
 
+    # Try realtime price first (15min delayed during market hours)
+    realtime = await get_realtime_price(symbol)
+    if realtime:
+        return realtime
+    # Fall back to cached daily close
     result = await db.execute(
         select(PriceHistory.close)
         .where(PriceHistory.symbol == symbol)

@@ -334,3 +334,16 @@ async def fetch_weekly_ohlcv(
             for r in rows
         ]
     )
+
+
+async def get_realtime_price(symbol: str) -> float | None:
+    """Get current price using GLOBAL_QUOTE (15min delayed during market hours)."""
+    try:
+        data = await _av_request({"function": "GLOBAL_QUOTE", "symbol": symbol})
+        quote = data.get("Global Quote", {})
+        price = quote.get("05. price")
+        if price:
+            return float(price)
+    except Exception:
+        pass
+    return None
