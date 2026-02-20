@@ -85,13 +85,13 @@ async def _update_position_prices():
                     for pos in positions:
                         price = await get_realtime_price(pos.symbol)
                         if price:
-                            logger.debug(f"{pos.symbol}: updated to ${price}")
+                            logger.info(f"{pos.symbol}: realtime ${price}")
 
                     await db.commit()
                     if positions:
-                        logger.info(f"Updated prices for {len(positions)} positions")
+                        logger.info(f"Price update: {len(positions)} positions")
             except Exception as e:
-                logger.error(f"Failed to update position prices: {e}")
+                logger.error(f"Price update failed: {e}")
 
         await asyncio.sleep(900)  # 15 minutes
 
