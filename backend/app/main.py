@@ -64,8 +64,22 @@ async def _scheduled_scanner():
         await run_scan(full=full)
 
 
+async def _intraday_scanner():
+    """Scan watchlist every 30 minutes during market hours (10:00-15:30 ET, weekdays)."""
+    while True:
+        now_et = datetime.now(ET)
+        market_minutes = now_et.hour * 60 + now_et.minute
+        if now_et.weekday() < 5 and 600 <= market_minutes < 930:
+            logger.info("Intraday scan starting")
+            try:
+                await run_scan(full=False)
+            except Exception as e:
+                logger.exception("Intraday scan error: %s", e)
+        await asyncio.sleep(1800)
+
+
 async def _update_position_prices():
-    """Update realtime prices for open positions every 15 minutes during market hours."""
+    """Update realtime prices for open positions every minute during market hours."""
     from sqlalchemy import select
     from app.models import Position
 
@@ -94,7 +108,7 @@ async def _update_position_prices():
             except Exception as e:
                 logger.error(f"Price update failed: {e}")
 
-        await asyncio.sleep(900)  # 15 minutes
+        await asyncio.sleep(60)
 
 
 async def _poll_broker_orders():
@@ -200,10 +214,12 @@ async def _create_position_from_fill(cmd, info, db):
 async def lifespan(app: FastAPI):
     await init_db()
     scanner_task = asyncio.create_task(_scheduled_scanner())
+    intraday_task = asyncio.create_task(_intraday_scanner())
     price_task = asyncio.create_task(_update_position_prices())
     poll_task = asyncio.create_task(_poll_broker_orders())
     yield
     scanner_task.cancel()
+    intraday_task.cancel()
     price_task.cancel()
     poll_task.cancel()
     if futu_broker.is_connected:
