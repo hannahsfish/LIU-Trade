@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -5,9 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Command, Position, TradePlan
+from app.models import BrokerOrder, Command, Position, TradePlan
 from app.schemas import CommandResponse, ExecuteCommandRequest
 from app.services.command_generator import sync_position_commands
+from app.services.futu_broker import futu_broker
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -20,7 +24,7 @@ async def list_commands(db: AsyncSession = Depends(get_db)):
 
     result = await db.execute(
         select(Command)
-        .where(Command.status == "PENDING")
+        .where(Command.status.in_(["PENDING", "SUBMITTING"]))
         .order_by(Command.created_at.desc())
     )
     commands = result.scalars().all()
@@ -60,6 +64,59 @@ async def execute_command(
     if not cmd:
         raise HTTPException(status_code=404, detail="Command not found")
 
+    if futu_broker.is_connected:
+        return await _execute_via_broker(cmd, req, db)
+
+    return await _execute_local(cmd, req, db)
+
+
+async def _execute_via_broker(
+    cmd: Command, req: ExecuteCommandRequest, db: AsyncSession
+):
+    side = "BUY" if cmd.action in ("BUY",) else "SELL"
+    order_type = req.order_type if req.order_type in ("LIMIT", "MARKET") else "LIMIT"
+
+    try:
+        placed = await futu_broker.place_order(
+            symbol=cmd.symbol,
+            side=side,
+            price=req.actual_price,
+            quantity=req.actual_quantity,
+            order_type=order_type,
+        )
+    except Exception as e:
+        logger.exception("Futu place_order failed for command %s", cmd.id)
+        raise HTTPException(status_code=502, detail=f"Broker order failed: {e}")
+
+    broker_order = BrokerOrder(
+        command_id=cmd.id,
+        futu_order_id=placed.futu_order_id,
+        symbol=cmd.symbol,
+        side=side,
+        order_type=order_type,
+        price=req.actual_price,
+        quantity=req.actual_quantity,
+        status="SUBMITTED",
+    )
+    db.add(broker_order)
+
+    cmd.status = "SUBMITTING"
+    cmd.actual_price = req.actual_price
+    cmd.actual_quantity = req.actual_quantity
+
+    await db.commit()
+
+    return {
+        "status": "SUBMITTING",
+        "command_id": cmd.id,
+        "broker_order_id": broker_order.id,
+        "futu_order_id": placed.futu_order_id,
+    }
+
+
+async def _execute_local(
+    cmd: Command, req: ExecuteCommandRequest, db: AsyncSession
+):
     cmd.status = "EXECUTED"
     cmd.actual_price = req.actual_price
     cmd.actual_quantity = req.actual_quantity

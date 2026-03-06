@@ -27,9 +27,29 @@ class Action(str, Enum):
 
 class CommandStatus(str, Enum):
     PENDING = "PENDING"
+    SUBMITTING = "SUBMITTING"
     EXECUTED = "EXECUTED"
     DISMISSED = "DISMISSED"
     EXPIRED = "EXPIRED"
+
+
+class BrokerOrderStatus(str, Enum):
+    SUBMITTED = "SUBMITTED"
+    FILLED = "FILLED"
+    PARTIAL = "PARTIAL"
+    CANCELLED = "CANCELLED"
+    REJECTED = "REJECTED"
+    FAILED = "FAILED"
+
+
+class OrderSide(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+
+class OrderType(str, Enum):
+    LIMIT = "LIMIT"
+    MARKET = "MARKET"
 
 
 class PlanStatus(str, Enum):
@@ -187,6 +207,7 @@ class CommandResponse(BaseModel):
 class ExecuteCommandRequest(BaseModel):
     actual_price: float
     actual_quantity: int
+    order_type: str = "LIMIT"
 
 
 class CreatePlanRequest(BaseModel):
@@ -247,3 +268,21 @@ class PositionResponse(BaseModel):
 class ClosePositionRequest(BaseModel):
     exit_price: float
     exit_reason: str
+
+
+class BrokerOrderResponse(BaseModel):
+    id: int
+    command_id: int
+    position_id: int | None = None
+    futu_order_id: str | None = None
+    symbol: str
+    side: str
+    order_type: str
+    price: float | None = None
+    quantity: int
+    filled_price: float | None = None
+    filled_quantity: int | None = None
+    status: str
+    error_message: str | None = None
+    created_at: UTCDatetime
+    updated_at: UTCDatetime

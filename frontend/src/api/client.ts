@@ -132,6 +132,41 @@ export interface WatchlistItem {
   latest_signal: BuySignal & { strength: number; created_at: string } | null
 }
 
+export interface BrokerStatus {
+  connected: boolean
+  trd_env: string
+  account?: {
+    cash: number
+    total_assets: number
+    market_value: number
+    buying_power: number
+  }
+  account_error?: string
+}
+
+export interface BrokerPositionItem {
+  symbol: string
+  quantity: number
+  cost_price: number
+  market_value: number
+  unrealized_pnl: number
+  unrealized_pnl_pct: number
+}
+
+export interface BrokerOrderItem {
+  id: number
+  command_id: number
+  futu_order_id: string | null
+  symbol: string
+  side: string
+  order_type: string
+  price: number | null
+  quantity: number
+  filled_price: number | null
+  filled_quantity: number | null
+  status: string
+}
+
 export const api = {
   searchStocks: (q: string) =>
     request<StockSearchResult[]>(`/stocks/search?q=${encodeURIComponent(q)}`),
@@ -151,10 +186,10 @@ export const api = {
   getCommands: () =>
     request<CommandItem[]>(`/commands`),
 
-  executeCommand: (id: number, actual_price: number, actual_quantity: number) =>
+  executeCommand: (id: number, actual_price: number, actual_quantity: number, order_type = 'LIMIT') =>
     request(`/commands/${id}/execute`, {
       method: 'POST',
-      body: JSON.stringify({ actual_price, actual_quantity }),
+      body: JSON.stringify({ actual_price, actual_quantity, order_type }),
     }),
 
   dismissCommand: (id: number) =>
@@ -195,4 +230,22 @@ export const api = {
 
   removeFromWatchlist: (symbol: string) =>
     request(`/scanner/watchlist/${symbol}`, { method: 'DELETE' }),
+
+  getBrokerStatus: () =>
+    request<BrokerStatus>(`/broker/status`),
+
+  connectBroker: () =>
+    request<{ status: string; trd_env?: string }>(`/broker/connect`, { method: 'POST' }),
+
+  disconnectBroker: () =>
+    request<{ status: string }>(`/broker/disconnect`, { method: 'POST' }),
+
+  getBrokerPositions: () =>
+    request<BrokerPositionItem[]>(`/broker/positions`),
+
+  getBrokerOrders: () =>
+    request<BrokerOrderItem[]>(`/broker/orders`),
+
+  cancelBrokerOrder: (brokerOrderId: number) =>
+    request<{ status: string }>(`/broker/orders/${brokerOrderId}/cancel`, { method: 'POST' }),
 }

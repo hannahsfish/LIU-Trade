@@ -123,6 +123,28 @@ class Signal(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class BrokerOrder(Base):
+    __tablename__ = "broker_orders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    command_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    position_id: Mapped[int | None] = mapped_column(Integer)
+    futu_order_id: Mapped[str | None] = mapped_column(String)
+    symbol: Mapped[str] = mapped_column(String, nullable=False)
+    side: Mapped[str] = mapped_column(String, nullable=False)
+    order_type: Mapped[str] = mapped_column(String, nullable=False, default="LIMIT")
+    price: Mapped[float | None] = mapped_column(Float)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    filled_price: Mapped[float | None] = mapped_column(Float)
+    filled_quantity: Mapped[int | None] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String, default="SUBMITTED")
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
 class Command(Base):
     __tablename__ = "commands"
 

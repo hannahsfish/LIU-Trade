@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 pandas==2.2.3
 numpy==2.2.1
 pydantic==2.10.4
+futu-api==10.0.6008
